@@ -1,6 +1,7 @@
 using AcxiomCRM.Data;
 using AcxiomCRM.Models;
 using AcxiomCRM.Services;
+using AcxiomCRM.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -10,10 +11,6 @@ namespace AcxiomCRM.Controllers;
 
 public class ActivitiesController : CrmControllerBase
 {
-    private static readonly string[] EditableFields =
-        { nameof(Activity.ActivityType), nameof(Activity.Subject), nameof(Activity.Description), nameof(Activity.ActivityDate),
-          nameof(Activity.CustomerId), nameof(Activity.LeadId), nameof(Activity.Status) };
-
     public ActivitiesController(ApplicationDbContext db, UserManager<IdentityUser> users) : base(db, users) { }
 
     public async Task<IActionResult> Index(ActivityType? type, DateTime? date, ActivityStatus? status, string? assignedTo)
@@ -36,20 +33,23 @@ public class ActivitiesController : CrmControllerBase
     public async Task<IActionResult> Create(int? customerId, int? leadId)
     {
         await LoadFormAsync();
-        return View("Edit", new Activity { CustomerId = customerId, LeadId = leadId });
+        return View("Edit", new ActivityFormViewModel { CustomerId = customerId, LeadId = leadId });
     }
 
     [HttpPost, ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create([Bind("ActivityType,Subject,Description,ActivityDate,CustomerId,LeadId,Status,AssignedTo")] Activity activity)
+    public async Task<IActionResult> Create(ActivityFormViewModel form)
     {
-        await ValidateRelatedAsync(activity.CustomerId, activity.LeadId);
-        await ApplyAssignmentAsync(activity);
+        form.Id = 0;
+        await ValidateRelatedAsync(form.CustomerId, form.LeadId);
+        await ApplyAssignmentAsync(form);
         if (!ModelState.IsValid)
         {
             await LoadFormAsync();
-            return View("Edit", activity);
+            return View("Edit", form);
         }
 
+        var activity = new Activity();
+        form.ApplyTo(activity);
         Db.Activities.Add(activity);
         await Db.SaveChangesAsync();
         TempData["Success"] = "Activity logged.";
@@ -61,25 +61,25 @@ public class ActivitiesController : CrmControllerBase
         var activity = await Db.Activities.VisibleTo(User).FirstOrDefaultAsync(a => a.Id == id);
         if (activity == null) return NotFound();
         await LoadFormAsync();
-        return View(activity);
+        return View(ActivityFormViewModel.From(activity));
     }
 
-    [HttpPost, ActionName("Edit"), ValidateAntiForgeryToken]
-    public async Task<IActionResult> EditPost(int id)
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Edit(int id, ActivityFormViewModel form)
     {
         var activity = await Db.Activities.VisibleTo(User).FirstOrDefaultAsync(a => a.Id == id);
         if (activity == null) return NotFound();
 
-        var fields = User.IsSalesOnly() ? EditableFields : EditableFields.Append(nameof(Activity.AssignedTo)).ToArray();
-        await TryUpdateModelAsync(activity, "", m => fields.Contains(m.PropertyName));
-        await ValidateRelatedAsync(activity.CustomerId, activity.LeadId);
-        await ApplyAssignmentAsync(activity);
+        form.Id = id;
+        await ValidateRelatedAsync(form.CustomerId, form.LeadId);
+        await ApplyAssignmentAsync(form);
         if (!ModelState.IsValid)
         {
             await LoadFormAsync();
-            return View(activity);
+            return View(form);
         }
 
+        form.ApplyTo(activity);
         await Db.SaveChangesAsync();
         TempData["Success"] = "Activity updated.";
         return RedirectToAction(nameof(Index));

@@ -50,8 +50,13 @@ public class Opportunity : IOwned
     [NotMapped]
     public bool IsOpen => Stage is not (OpportunityStage.Won or OpportunityStage.Lost);
 
-    [NotMapped]
-    public string Status => IsOpen ? "Open" : Stage.ToString();
+    /// <summary>Open / Won / Lost. Stored as a column (spec 17.3) but always derived from Stage, so it cannot drift.</summary>
+    [StringLength(10)]
+    public string Status
+    {
+        get => IsOpen ? "Open" : Stage.ToString();
+        private set { }
+    }
 
     [NotMapped, Display(Name = "Weighted Amount")]
     public decimal WeightedAmount => Amount * Probability / 100m;

@@ -14,5 +14,6 @@ public class DashboardViewModel
 
     public Dictionary<string, int> LeadStatusChart { get; set; } = new();
     public Dictionary<string, int> PipelineChart { get; set; } = new();
+    public int MonthlySalesMonths { get; set; }
     public Dictionary<string, decimal> MonthlySalesChart { get; set; } = new();
 }

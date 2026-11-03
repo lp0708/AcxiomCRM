@@ -29,6 +29,14 @@ public class ApplicationDbContext : IdentityDbContext
     {
         base.OnModelCreating(builder);
 
+        // Spec 17.3 names primary keys CustomerId, LeadId, ...; the C# property stays Id.
+        builder.Entity<Customer>().Property(c => c.Id).HasColumnName("CustomerId");
+        builder.Entity<Lead>().Property(l => l.Id).HasColumnName("LeadId");
+        builder.Entity<Opportunity>().Property(o => o.Id).HasColumnName("OpportunityId");
+        builder.Entity<FollowUp>().Property(f => f.Id).HasColumnName("FollowUpId");
+        builder.Entity<Activity>().Property(a => a.Id).HasColumnName("ActivityId");
+        builder.Entity<AuditLog>().Property(a => a.Id).HasColumnName("AuditLogId");
+
         builder.Entity<Customer>(e =>
         {
             e.HasIndex(c => c.Email).IsUnique();
@@ -48,6 +56,7 @@ public class ApplicationDbContext : IdentityDbContext
         builder.Entity<Opportunity>(e =>
         {
             e.Property(o => o.Amount).HasConversion<double>();
+            e.HasIndex(o => o.Status);
             e.HasOne(o => o.Customer).WithMany(c => c.Opportunities).HasForeignKey(o => o.CustomerId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne(o => o.Lead).WithMany().HasForeignKey(o => o.LeadId).OnDelete(DeleteBehavior.SetNull);
             e.HasOne(o => o.AssignedUser).WithMany().HasForeignKey(o => o.AssignedTo).OnDelete(DeleteBehavior.SetNull);

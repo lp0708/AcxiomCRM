@@ -21,7 +21,7 @@ public abstract class CrmControllerBase : Controller
     }
 
     /// <summary>Sales Executives always own what they create; Admin/Manager must assign a valid Sales Executive.</summary>
-    protected async Task ApplyAssignmentAsync(IOwned record)
+    protected async Task ApplyAssignmentAsync(IAssignable record)
     {
         if (User.IsSalesOnly())
         {
@@ -31,13 +31,13 @@ public abstract class CrmControllerBase : Controller
 
         if (string.IsNullOrEmpty(record.AssignedTo))
         {
-            ModelState.AddModelError(nameof(IOwned.AssignedTo), "Assign the record to a Sales Executive.");
+            ModelState.AddModelError(nameof(IAssignable.AssignedTo), "Assign the record to a Sales Executive.");
             return;
         }
 
         var salesIds = (await Users.GetUsersInRoleAsync(Roles.SalesExecutive)).Select(u => u.Id);
         if (!salesIds.Contains(record.AssignedTo))
-            ModelState.AddModelError(nameof(IOwned.AssignedTo), "Select a valid Sales Executive.");
+            ModelState.AddModelError(nameof(IAssignable.AssignedTo), "Select a valid Sales Executive.");
     }
 
     /// <summary>Checks that referenced customer/lead ids exist and are visible to the current user.</summary>

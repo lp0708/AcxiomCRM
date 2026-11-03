@@ -21,7 +21,8 @@ namespace AcxiomCRM.Data.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("ActivityId");
 
                     b.Property<DateTime>("ActivityDate")
                         .HasColumnType("TEXT");
@@ -65,7 +66,8 @@ namespace AcxiomCRM.Data.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("AuditLogId");
 
                     b.Property<string>("Action")
                         .IsRequired()
@@ -109,7 +111,8 @@ namespace AcxiomCRM.Data.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("CustomerId");
 
                     b.Property<string>("Address")
                         .HasMaxLength(250)
@@ -181,7 +184,8 @@ namespace AcxiomCRM.Data.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("FollowUpId");
 
                     b.Property<string>("AssignedTo")
                         .HasColumnType("TEXT");
@@ -220,7 +224,8 @@ namespace AcxiomCRM.Data.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("LeadId");
 
                     b.Property<string>("AssignedTo")
                         .HasColumnType("TEXT");
@@ -278,7 +283,8 @@ namespace AcxiomCRM.Data.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("OpportunityId");
 
                     b.Property<double>("Amount")
                         .HasColumnType("REAL");
@@ -313,6 +319,11 @@ namespace AcxiomCRM.Data.Migrations
                     b.Property<int>("Stage")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
 
                     b.HasIndex("AssignedTo");
@@ -320,6 +331,8 @@ namespace AcxiomCRM.Data.Migrations
                     b.HasIndex("CustomerId");
 
                     b.HasIndex("LeadId");
+
+                    b.HasIndex("Status");
 
                     b.ToTable("Opportunities");
                 });

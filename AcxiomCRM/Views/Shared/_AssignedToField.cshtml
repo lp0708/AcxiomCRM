@@ -1,5 +1,5 @@
 @* "Assigned To" dropdown, shown only to Admin/Manager. Sales Executives always own their records. *@
-@model IOwned
+@model IAssignable
 @if (!User.IsSalesOnly())
 {
     <div class="col-md-6 mb-3">

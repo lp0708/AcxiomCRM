@@ -1,6 +1,7 @@
 using AcxiomCRM.Data;
 using AcxiomCRM.Models;
 using AcxiomCRM.Services;
+using AcxiomCRM.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -10,10 +11,6 @@ namespace AcxiomCRM.Controllers;
 
 public class CustomersController : CrmControllerBase
 {
-    private static readonly string[] EditableFields =
-        { nameof(Customer.CustomerName), nameof(Customer.Email), nameof(Customer.Phone), nameof(Customer.CompanyName),
-          nameof(Customer.Address), nameof(Customer.City), nameof(Customer.State), nameof(Customer.Status), nameof(Customer.Notes) };
-
     public CustomersController(ApplicationDbContext db, UserManager<IdentityUser> users) : base(db, users) { }
 
     public async Task<IActionResult> Index(string? q, CustomerStatus? status)
@@ -46,22 +43,27 @@ public class CustomersController : CrmControllerBase
     public async Task<IActionResult> Create()
     {
         await LoadAssigneesAsync();
-        return View("Edit", new Customer());
+        return View("Edit", new CustomerFormViewModel());
     }
 
     [HttpPost, ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create([Bind("CustomerName,Email,Phone,CompanyName,Address,City,State,Status,Notes,AssignedTo")] Customer customer)
+    public async Task<IActionResult> Create(CustomerFormViewModel form)
     {
-        await ValidateAsync(customer);
+        form.Id = 0;
+        await ValidateAsync(form);
         if (!ModelState.IsValid)
         {
             await LoadAssigneesAsync();
-            return View("Edit", customer);
+            return View("Edit", form);
         }
 
-        customer.CustomerCode = NextCode("CUST", await Db.Customers.MaxAsync(c => (int?)c.Id) ?? 0);
-        customer.CreatedDate = DateTime.Now;
-        customer.CreatedBy = User.Identity?.Name;
+        var customer = new Customer
+        {
+            CustomerCode = NextCode("CUST", await Db.Customers.MaxAsync(c => (int?)c.Id) ?? 0),
+            CreatedDate = DateTime.Now,
+            CreatedBy = User.Identity?.Name
+        };
+        form.ApplyTo(customer);
         Db.Customers.Add(customer);
         await Db.SaveChangesAsync();
 
@@ -74,24 +76,24 @@ public class CustomersController : CrmControllerBase
         var customer = await Db.Customers.VisibleTo(User).FirstOrDefaultAsync(c => c.Id == id);
         if (customer == null) return NotFound();
         await LoadAssigneesAsync();
-        return View(customer);
+        return View(CustomerFormViewModel.From(customer));
     }
 
-    [HttpPost, ActionName("Edit"), ValidateAntiForgeryToken]
-    public async Task<IActionResult> EditPost(int id)
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Edit(int id, CustomerFormViewModel form)
     {
         var customer = await Db.Customers.VisibleTo(User).FirstOrDefaultAsync(c => c.Id == id);
         if (customer == null) return NotFound();
 
-        var fields = User.IsSalesOnly() ? EditableFields : EditableFields.Append(nameof(Customer.AssignedTo)).ToArray();
-        await TryUpdateModelAsync(customer, "", m => fields.Contains(m.PropertyName));
-        await ValidateAsync(customer);
+        form.Id = id;
+        await ValidateAsync(form);
         if (!ModelState.IsValid)
         {
             await LoadAssigneesAsync();
-            return View(customer);
+            return View(form);
         }
 
+        form.ApplyTo(customer);
         await Db.SaveChangesAsync();
         TempData["Success"] = "Customer updated.";
         return RedirectToAction(nameof(Details), new { id });
@@ -114,15 +116,15 @@ public class CustomersController : CrmControllerBase
         return RedirectToAction(nameof(Index));
     }
 
-    private async Task ValidateAsync(Customer customer)
+    private async Task ValidateAsync(CustomerFormViewModel form)
     {
-        customer.Email = customer.Email?.Trim().ToLowerInvariant() ?? "";
-        customer.Phone = customer.Phone?.Trim() ?? "";
-        await ApplyAssignmentAsync(customer);
+        form.Email = form.Email?.Trim().ToLowerInvariant() ?? "";
+        form.Phone = form.Phone?.Trim() ?? "";
+        await ApplyAssignmentAsync(form);
 
-        if (await Db.Customers.AnyAsync(c => c.Email == customer.Email && c.Id != customer.Id))
-            ModelState.AddModelError(nameof(Customer.Email), "A customer with this email already exists.");
-        if (await Db.Customers.AnyAsync(c => c.Phone == customer.Phone && c.Id != customer.Id))
-            ModelState.AddModelError(nameof(Customer.Phone), "A customer with this phone number already exists.");
+        if (await Db.Customers.AnyAsync(c => c.Email == form.Email && c.Id != form.Id))
+            ModelState.AddModelError(nameof(form.Email), "A customer with this email already exists.");
+        if (await Db.Customers.AnyAsync(c => c.Phone == form.Phone && c.Id != form.Id))
+            ModelState.AddModelError(nameof(form.Phone), "A customer with this phone number already exists.");
     }
 }

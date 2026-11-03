@@ -1,6 +1,7 @@
 using AcxiomCRM.Data;
 using AcxiomCRM.Models;
 using AcxiomCRM.Services;
+using AcxiomCRM.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -10,10 +11,6 @@ namespace AcxiomCRM.Controllers;
 
 public class LeadsController : CrmControllerBase
 {
-    private static readonly string[] EditableFields =
-        { nameof(Lead.LeadName), nameof(Lead.Email), nameof(Lead.Phone), nameof(Lead.CompanyName), nameof(Lead.Source),
-          nameof(Lead.Status), nameof(Lead.Priority), nameof(Lead.ExpectedValue), nameof(Lead.Notes) };
-
     public LeadsController(ApplicationDbContext db, UserManager<IdentityUser> users) : base(db, users) { }
 
     public async Task<IActionResult> Index(string? q, LeadStatus? status, string? assignedTo)
@@ -47,23 +44,28 @@ public class LeadsController : CrmControllerBase
     public async Task<IActionResult> Create()
     {
         await LoadFormAsync(null);
-        return View("Edit", new Lead());
+        return View("Edit", new LeadFormViewModel());
     }
 
     [HttpPost, ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create([Bind("LeadName,Email,Phone,CompanyName,Source,Status,Priority,ExpectedValue,Notes,AssignedTo")] Lead lead)
+    public async Task<IActionResult> Create(LeadFormViewModel form)
     {
-        if (!LeadWorkflow.InitialStatuses.Contains(lead.Status))
-            ModelState.AddModelError(nameof(Lead.Status), "A new lead cannot start with this status.");
-        await ApplyAssignmentAsync(lead);
+        form.Id = 0;
+        if (!LeadWorkflow.InitialStatuses.Contains(form.Status))
+            ModelState.AddModelError(nameof(form.Status), "A new lead cannot start with this status.");
+        await ApplyAssignmentAsync(form);
         if (!ModelState.IsValid)
         {
             await LoadFormAsync(null);
-            return View("Edit", lead);
+            return View("Edit", form);
         }
 
-        lead.LeadCode = NextCode("LEAD", await Db.Leads.MaxAsync(l => (int?)l.Id) ?? 0);
-        lead.CreatedDate = DateTime.Now;
+        var lead = new Lead
+        {
+            LeadCode = NextCode("LEAD", await Db.Leads.MaxAsync(l => (int?)l.Id) ?? 0),
+            CreatedDate = DateTime.Now
+        };
+        form.ApplyTo(lead);
         Db.Leads.Add(lead);
         await Db.SaveChangesAsync();
 
@@ -76,28 +78,26 @@ public class LeadsController : CrmControllerBase
         var lead = await Db.Leads.VisibleTo(User).FirstOrDefaultAsync(l => l.Id == id);
         if (lead == null) return NotFound();
         await LoadFormAsync(lead.Status);
-        return View(lead);
+        return View(LeadFormViewModel.From(lead));
     }
 
-    [HttpPost, ActionName("Edit"), ValidateAntiForgeryToken]
-    public async Task<IActionResult> EditPost(int id)
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Edit(int id, LeadFormViewModel form)
     {
         var lead = await Db.Leads.VisibleTo(User).FirstOrDefaultAsync(l => l.Id == id);
         if (lead == null) return NotFound();
 
-        var currentStatus = lead.Status;
-        var fields = User.IsSalesOnly() ? EditableFields : EditableFields.Append(nameof(Lead.AssignedTo)).ToArray();
-        await TryUpdateModelAsync(lead, "", m => fields.Contains(m.PropertyName));
-
-        if (!LeadWorkflow.CanMove(currentStatus, lead.Status))
-            ModelState.AddModelError(nameof(Lead.Status), $"A lead cannot move from {currentStatus} to {lead.Status}.");
-        await ApplyAssignmentAsync(lead);
+        form.Id = id;
+        if (!LeadWorkflow.CanMove(lead.Status, form.Status))
+            ModelState.AddModelError(nameof(form.Status), $"A lead cannot move from {lead.Status} to {form.Status}.");
+        await ApplyAssignmentAsync(form);
         if (!ModelState.IsValid)
         {
-            await LoadFormAsync(currentStatus);
-            return View(lead);
+            await LoadFormAsync(lead.Status);
+            return View(form);
         }
 
+        form.ApplyTo(lead);
         await Db.SaveChangesAsync();
         TempData["Success"] = "Lead updated.";
         return RedirectToAction(nameof(Details), new { id });

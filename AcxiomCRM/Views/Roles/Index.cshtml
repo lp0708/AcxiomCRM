@@ -1,0 +1,29 @@
+@model RolesViewModel
+@{
+    ViewData["Title"] = "Roles & Permissions";
+}
+
+<h2>Roles &amp; Permissions</h2>
+<p class="text-muted">Each user has exactly one role. Change a user's role on the <a asp-controller="Users" asp-action="Index">Users</a> page.</p>
+
+<h4>Roles</h4>
+<table class="table table-striped align-middle">
+    <thead><tr><th>Role</th><th>Description</th><th class="text-end">Users</th></tr></thead>
+    <tbody>
+        @foreach (var r in Model.Roles)
+        {
+            <tr><td class="fw-bold">@r.Role</td><td>@r.Description</td><td class="text-end">@r.UserCount</td></tr>
+        }
+    </tbody>
+</table>
+
+<h4>Permissions</h4>
+<table class="table table-bordered align-middle">
+    <thead class="table-light"><tr><th>Module</th><th>Admin</th><th>Manager</th><th>SalesExecutive</th></tr></thead>
+    <tbody>
+        @foreach (var p in Model.Matrix)
+        {
+            <tr><td class="fw-bold">@p.Module</td><td>@p.Admin</td><td>@p.Manager</td><td>@p.SalesExecutive</td></tr>
+        }
+    </tbody>
+</table>

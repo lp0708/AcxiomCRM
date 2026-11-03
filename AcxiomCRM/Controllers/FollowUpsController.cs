@@ -1,6 +1,7 @@
 using AcxiomCRM.Data;
 using AcxiomCRM.Models;
 using AcxiomCRM.Services;
+using AcxiomCRM.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -10,10 +11,6 @@ namespace AcxiomCRM.Controllers;
 
 public class FollowUpsController : CrmControllerBase
 {
-    private static readonly string[] EditableFields =
-        { nameof(FollowUp.CustomerId), nameof(FollowUp.LeadId), nameof(FollowUp.FollowUpDate), nameof(FollowUp.FollowUpType),
-          nameof(FollowUp.Remarks), nameof(FollowUp.Status) };
-
     public FollowUpsController(ApplicationDbContext db, UserManager<IdentityUser> users) : base(db, users) { }
 
     /// <param name="view">"pending" (planned), "overdue" or empty for all.</param>
@@ -45,22 +42,28 @@ public class FollowUpsController : CrmControllerBase
     public async Task<IActionResult> Create(int? customerId, int? leadId)
     {
         await LoadFormAsync();
-        return View("Edit", new FollowUp { CustomerId = customerId, LeadId = leadId });
+        return View("Edit", new FollowUpFormViewModel { CustomerId = customerId, LeadId = leadId });
     }
 
     [HttpPost, ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create([Bind("CustomerId,LeadId,FollowUpDate,FollowUpType,Remarks,AssignedTo")] FollowUp followUp)
+    public async Task<IActionResult> Create(FollowUpFormViewModel form)
     {
+        form.Id = 0;
         // A newly scheduled follow-up always starts as Planned, so the "not before today" rule always applies.
-        followUp.Status = FollowUpStatus.Planned;
-        await ValidateRelatedAsync(followUp.CustomerId, followUp.LeadId);
-        await ApplyAssignmentAsync(followUp);
+        form.Status = FollowUpStatus.Planned;
+        if (form.FollowUpDate.Date < DateTime.Today
+            && ModelState.GetFieldValidationState(nameof(form.FollowUpDate)) != Microsoft.AspNetCore.Mvc.ModelBinding.ModelValidationState.Invalid)
+            ModelState.AddModelError(nameof(form.FollowUpDate), "Follow-up date cannot be earlier than today.");
+        await ValidateRelatedAsync(form.CustomerId, form.LeadId);
+        await ApplyAssignmentAsync(form);
         if (!ModelState.IsValid)
         {
             await LoadFormAsync();
-            return View("Edit", followUp);
+            return View("Edit", form);
         }
 
+        var followUp = new FollowUp();
+        form.ApplyTo(followUp);
         Db.FollowUps.Add(followUp);
         await Db.SaveChangesAsync();
         TempData["Success"] = "Follow-up scheduled.";
@@ -72,25 +75,25 @@ public class FollowUpsController : CrmControllerBase
         var followUp = await Db.FollowUps.VisibleTo(User).FirstOrDefaultAsync(f => f.Id == id);
         if (followUp == null) return NotFound();
         await LoadFormAsync();
-        return View(followUp);
+        return View(FollowUpFormViewModel.From(followUp));
     }
 
-    [HttpPost, ActionName("Edit"), ValidateAntiForgeryToken]
-    public async Task<IActionResult> EditPost(int id)
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Edit(int id, FollowUpFormViewModel form)
     {
         var followUp = await Db.FollowUps.VisibleTo(User).FirstOrDefaultAsync(f => f.Id == id);
         if (followUp == null) return NotFound();
 
-        var fields = User.IsSalesOnly() ? EditableFields : EditableFields.Append(nameof(FollowUp.AssignedTo)).ToArray();
-        await TryUpdateModelAsync(followUp, "", m => fields.Contains(m.PropertyName));
-        await ValidateRelatedAsync(followUp.CustomerId, followUp.LeadId);
-        await ApplyAssignmentAsync(followUp);
+        form.Id = id;
+        await ValidateRelatedAsync(form.CustomerId, form.LeadId);
+        await ApplyAssignmentAsync(form);
         if (!ModelState.IsValid)
         {
             await LoadFormAsync();
-            return View(followUp);
+            return View(form);
         }
 
+        form.ApplyTo(followUp);
         await Db.SaveChangesAsync();
         TempData["Success"] = "Follow-up updated.";
         return RedirectToAction(nameof(Index));

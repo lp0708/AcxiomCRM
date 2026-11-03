@@ -1,6 +1,7 @@
 using AcxiomCRM.Data;
 using AcxiomCRM.Models;
 using AcxiomCRM.Services;
+using AcxiomCRM.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -10,10 +11,6 @@ namespace AcxiomCRM.Controllers;
 
 public class OpportunitiesController : CrmControllerBase
 {
-    private static readonly string[] EditableFields =
-        { nameof(Opportunity.OpportunityName), nameof(Opportunity.CustomerId), nameof(Opportunity.Amount), nameof(Opportunity.Stage),
-          nameof(Opportunity.Probability), nameof(Opportunity.ExpectedCloseDate), nameof(Opportunity.Notes) };
-
     public OpportunitiesController(ApplicationDbContext db, UserManager<IdentityUser> users) : base(db, users) { }
 
     public async Task<IActionResult> Index(string? q, OpportunityStage? stage, string? status)
@@ -25,13 +22,7 @@ public class OpportunitiesController : CrmControllerBase
             query = query.Where(o => EF.Functions.Like(o.OpportunityName, like) || EF.Functions.Like(o.Customer!.CustomerName, like));
         }
         if (stage != null) query = query.Where(o => o.Stage == stage);
-        query = status switch
-        {
-            "Open" => query.Where(o => o.Stage != OpportunityStage.Won && o.Stage != OpportunityStage.Lost),
-            "Won" => query.Where(o => o.Stage == OpportunityStage.Won),
-            "Lost" => query.Where(o => o.Stage == OpportunityStage.Lost),
-            _ => query
-        };
+        if (!string.IsNullOrEmpty(status)) query = query.Where(o => o.Status == status);
 
         ViewBag.Q = q;
         ViewBag.Stage = stage;
@@ -50,21 +41,23 @@ public class OpportunitiesController : CrmControllerBase
     public async Task<IActionResult> Create(int? customerId)
     {
         await LoadFormAsync();
-        return View("Edit", new Opportunity { CustomerId = customerId ?? 0 });
+        return View("Edit", new OpportunityFormViewModel { CustomerId = customerId ?? 0 });
     }
 
     [HttpPost, ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create([Bind("OpportunityName,CustomerId,Amount,Stage,Probability,ExpectedCloseDate,Notes,AssignedTo")] Opportunity opportunity)
+    public async Task<IActionResult> Create(OpportunityFormViewModel form)
     {
-        await ValidateRelatedAsync(opportunity.CustomerId, null);
-        await ApplyAssignmentAsync(opportunity);
+        form.Id = 0;
+        await ValidateRelatedAsync(form.CustomerId, null);
+        await ApplyAssignmentAsync(form);
         if (!ModelState.IsValid)
         {
             await LoadFormAsync();
-            return View("Edit", opportunity);
+            return View("Edit", form);
         }
 
-        opportunity.CreatedDate = DateTime.Now;
+        var opportunity = new Opportunity { CreatedDate = DateTime.Now };
+        form.ApplyTo(opportunity);
         Db.Opportunities.Add(opportunity);
         await Db.SaveChangesAsync();
 
@@ -77,25 +70,25 @@ public class OpportunitiesController : CrmControllerBase
         var opportunity = await Db.Opportunities.VisibleTo(User).FirstOrDefaultAsync(o => o.Id == id);
         if (opportunity == null) return NotFound();
         await LoadFormAsync();
-        return View(opportunity);
+        return View(OpportunityFormViewModel.From(opportunity));
     }
 
-    [HttpPost, ActionName("Edit"), ValidateAntiForgeryToken]
-    public async Task<IActionResult> EditPost(int id)
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Edit(int id, OpportunityFormViewModel form)
     {
         var opportunity = await Db.Opportunities.VisibleTo(User).FirstOrDefaultAsync(o => o.Id == id);
         if (opportunity == null) return NotFound();
 
-        var fields = User.IsSalesOnly() ? EditableFields : EditableFields.Append(nameof(Opportunity.AssignedTo)).ToArray();
-        await TryUpdateModelAsync(opportunity, "", m => fields.Contains(m.PropertyName));
-        await ValidateRelatedAsync(opportunity.CustomerId, null);
-        await ApplyAssignmentAsync(opportunity);
+        form.Id = id;
+        await ValidateRelatedAsync(form.CustomerId, null);
+        await ApplyAssignmentAsync(form);
         if (!ModelState.IsValid)
         {
             await LoadFormAsync();
-            return View(opportunity);
+            return View(form);
         }
 
+        form.ApplyTo(opportunity);
         await Db.SaveChangesAsync();
         TempData["Success"] = "Opportunity updated.";
         return RedirectToAction(nameof(Details), new { id });

@@ -34,6 +34,7 @@
                             @if (User.IsInRole(Roles.Admin))
                             {
                                 <li class="nav-item"><a class="nav-link" asp-area="" asp-controller="Users" asp-action="Index">Users</a></li>
+                                <li class="nav-item"><a class="nav-link" asp-area="" asp-controller="Roles" asp-action="Index">Roles</a></li>
                                 <li class="nav-item"><a class="nav-link" asp-area="" asp-controller="Audit" asp-action="Index">Audit Log</a></li>
                             }
                         }

@@ -11,10 +11,13 @@ namespace AcxiomCRM.Controllers;
 public class HomeController : Controller
 {
     private readonly ApplicationDbContext _db;
+    private readonly int _monthlySalesMonths;
 
-    public HomeController(ApplicationDbContext db)
+    public HomeController(ApplicationDbContext db, IConfiguration config)
     {
         _db = db;
+        // Reporting period of the Monthly Sales chart, configured in appsettings.json.
+        _monthlySalesMonths = Math.Clamp(config.GetValue("Dashboard:MonthlySalesMonths", 6), 1, 24);
     }
 
     /// <summary>Dashboard. Every number is computed from records the current user is allowed to see.</summary>
@@ -26,7 +29,7 @@ public class HomeController : Controller
             .ToListAsync();
         bool IsOpen(OpportunityStage s) => s is not (OpportunityStage.Won or OpportunityStage.Lost);
 
-        var firstMonth = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1).AddMonths(-5);
+        var firstMonth = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1).AddMonths(1 - _monthlySalesMonths);
         var won = opportunities.Where(o => o.Stage == OpportunityStage.Won).ToList();
 
         var model = new DashboardViewModel
@@ -45,7 +48,8 @@ public class HomeController : Controller
                 .ToDictionary(s => s.ToString(), s => leadStatuses.Count(x => x == s)),
             PipelineChart = Enum.GetValues<OpportunityStage>()
                 .ToDictionary(s => s.ToString(), s => opportunities.Count(o => o.Stage == s)),
-            MonthlySalesChart = Enumerable.Range(0, 6)
+            MonthlySalesMonths = _monthlySalesMonths,
+            MonthlySalesChart = Enumerable.Range(0, _monthlySalesMonths)
                 .Select(i => firstMonth.AddMonths(i))
                 .ToDictionary(m => m.ToString("MMM yyyy"),
                     m => won.Where(o => o.ExpectedCloseDate.Year == m.Year && o.ExpectedCloseDate.Month == m.Month).Sum(o => o.Amount))

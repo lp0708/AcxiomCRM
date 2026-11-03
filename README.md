@@ -38,7 +38,7 @@ AcxiomCRM/
   Models/Validation/  Shared regex rules + NotInPast attribute (server + client)
   Data/               DbContext (with audit capture), seed data, migrations
   Services/           Record scoping, lead status workflow, Identity sign-in/user manager overrides
-  ViewModels/         Dashboard, users, pipeline report
+  ViewModels/         Create/Edit form models for every CRM module, dashboard, users, roles, pipeline report
   Views/              Razor views
   wwwroot/js/validation.js   Client-side adapter for NotInPast
 ```
@@ -62,9 +62,13 @@ AcxiomCRM/
 | CRM records | All | All | Only records assigned to them |
 | Delete records | Yes | Yes | No |
 | Pipeline report | Yes | Yes | No |
-| Users and Audit Log | Yes | No | No |
+| Users, Roles & Permissions, Audit Log | Yes | No | No |
+
+The **Roles** page (Admin only) lists the three roles with user counts and the full permission matrix. Roles are fixed in code. Each user has exactly one role, assigned on the Users page.
 
 Record-level scope is enforced on the server by `ScopeExtensions.VisibleTo()` on every query. If a Sales Executive changes the id in a URL to someone else's record, they get a 404. Anything a Sales Executive creates is always assigned to them.
+
+Forms post to dedicated ViewModels (`ViewModels/*FormViewModel.cs`), not to the database entities. Server-managed fields such as codes, created date and source lead therefore can't be posted.
 
 **Validation**
 - Client-side validation comes from the same data annotations as the server: Required, email, phone, length, date and numeric rules.
@@ -80,9 +84,11 @@ Record-level scope is enforced on the server by `ScopeExtensions.VisibleTo()` on
 
 **Lead workflow:** New → Contacted → Qualified → **Convert**, with Unqualified and Lost along the way. Converting creates a customer, or reuses one with the same email or phone. It also creates an opportunity if the lead has an expected value.
 
-**Audit log:** `ApplicationDbContext.SaveChangesAsync` records every Create, Update and Delete on CRM records. Each entry has old and new values, user, time and IP address. The sign-in manager records Login, LoginFailed, LockedOut and Logout. The Users page records RoleChange, Activate, Deactivate and Unlock. The log can only be added to: there is no edit or delete. It is viewable by Admin only, with filters.
+**Audit log:** `ApplicationDbContext.SaveChangesAsync` records every Create, Update and Delete on CRM records. Each entry has old and new values, user, time and IP address. The sign-in manager records Login, LoginFailed, LockedOut and Logout. The user manager records Register, PasswordChange and PasswordReset, without storing passwords or tokens. The Users page records RoleChange, Activate, Deactivate and Unlock. The log can only be added to: there is no edit or delete. It is viewable by Admin only, with filters.
 
-**Dashboard:** 8 KPI cards plus 3 Chart.js charts (lead status, opportunity pipeline, monthly won sales). All figures are limited to the records the user is allowed to see.
+**Dashboard:** 8 KPI cards plus 3 Chart.js charts (lead status, opportunity pipeline, monthly won sales). All figures are limited to the records the user is allowed to see. The Monthly Sales period is set by `Dashboard:MonthlySalesMonths` in `appsettings.json` (default 6, allowed 1–24).
+
+**Database naming:** primary-key columns use the names in spec 17.3 (`CustomerId`, `LeadId`, `OpportunityId`, `FollowUpId`, `ActivityId`, `AuditLogId`). `Opportunities.Status` (Open/Won/Lost) is a stored column that is always derived from `Stage`.
 
 ## REST API
 
@@ -109,4 +115,5 @@ The API uses the same cookie as the website. CSRF is mitigated by the `SameSite=
 - **Managers' teams:** there is no team model, so a Manager sees all CRM records.
 - **Reports:** only the **Pipeline report** (by stage and by owner, with weighted amount) is a dedicated page. The other reports are covered by the filtered list pages and the dashboard.
 - **Not included:** pagination, exports, dashboard date filters, Swagger and automated unit tests.
+- **Register page hint:** the built-in Identity Register page shows a client-side "at least 6 characters" hint. The server still enforces the real policy of 8+ characters with upper case, lower case, a digit and a symbol.
 - **Database:** SQLite, so there's nothing to install. Switching to SQL Server means changing the EF provider and connection string.
