@@ -1,0 +1,47 @@
+@model List<AuditLog>
+@{
+    ViewData["Title"] = "Audit Log";
+}
+
+<h2>Audit Log</h2>
+<p class="text-muted">Latest 500 matching entries.</p>
+
+<form method="get" class="row g-2 mb-3">
+    <div class="col-md-3">
+        <input name="user" value="@ViewBag.User" class="form-control" placeholder="User" aria-label="User" />
+    </div>
+    <div class="col-md-2">
+        <select name="entity" class="form-select" asp-items="@(new SelectList((List<string>)ViewBag.Entities, (object?)ViewBag.Entity))" aria-label="Module">
+            <option value="">All modules</option>
+        </select>
+    </div>
+    <div class="col-md-2">
+        <select name="eventAction" class="form-select" asp-items="@(new SelectList((List<string>)ViewBag.Actions, (object?)ViewBag.EventAction))" aria-label="Action">
+            <option value="">All actions</option>
+        </select>
+    </div>
+    <div class="col-md-2"><input name="from" type="date" value="@ViewBag.From" class="form-control" aria-label="From date" /></div>
+    <div class="col-md-2"><input name="to" type="date" value="@ViewBag.To" class="form-control" aria-label="To date" /></div>
+    <div class="col-md-1"><button class="btn btn-outline-secondary w-100">Filter</button></div>
+</form>
+
+<table class="table table-sm table-striped align-middle small">
+    <thead>
+        <tr><th>Time</th><th>User</th><th>Action</th><th>Module</th><th>Record</th><th>Old Value</th><th>New Value</th><th>IP</th></tr>
+    </thead>
+    <tbody>
+        @foreach (var a in Model)
+        {
+            <tr class="@(a.Action is "LoginFailed" or "LockedOut" ? "table-warning" : "")">
+                <td class="text-nowrap">@a.CreatedDate.ToString("dd MMM yyyy HH:mm:ss")</td>
+                <td>@a.UserName</td>
+                <td>@a.Action</td>
+                <td>@a.EntityName</td>
+                <td>@a.RecordId</td>
+                <td class="text-break" style="max-width: 25rem">@a.OldValue</td>
+                <td class="text-break" style="max-width: 25rem">@a.NewValue</td>
+                <td>@a.IpAddress</td>
+            </tr>
+        }
+    </tbody>
+</table>

@@ -1,0 +1,59 @@
+@model Activity
+@{
+    var isNew = Model.Id == 0;
+    ViewData["Title"] = isNew ? "Log Activity" : "Edit Activity";
+}
+
+<h2>@ViewData["Title"]</h2>
+
+<form asp-action="@(isNew ? "Create" : "Edit")" asp-route-id="@(isNew ? null : Model.Id)" method="post" novalidate>
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <div class="row">
+        <div class="col-md-4 mb-3">
+            <label asp-for="ActivityType" class="form-label"></label>
+            <select asp-for="ActivityType" asp-items="@(new SelectList(Enum.GetNames<ActivityType>()))" class="form-select"></select>
+            <span asp-validation-for="ActivityType" class="text-danger"></span>
+        </div>
+        <div class="col-md-4 mb-3">
+            <label asp-for="ActivityDate" class="form-label"></label>
+            <input asp-for="ActivityDate" class="form-control" />
+            <span asp-validation-for="ActivityDate" class="text-danger"></span>
+        </div>
+        <div class="col-md-4 mb-3">
+            <label asp-for="Status" class="form-label"></label>
+            <select asp-for="Status" asp-items="@(new SelectList(Enum.GetNames<ActivityStatus>()))" class="form-select"></select>
+            <span asp-validation-for="Status" class="text-danger"></span>
+        </div>
+        <div class="col-md-12 mb-3">
+            <label asp-for="Subject" class="form-label"></label>
+            <input asp-for="Subject" class="form-control" />
+            <span asp-validation-for="Subject" class="text-danger"></span>
+        </div>
+        <div class="col-md-6 mb-3">
+            <label asp-for="CustomerId" class="form-label"></label>
+            <select asp-for="CustomerId" asp-items="ViewBag.Customers" class="form-select">
+                <option value="">-- None --</option>
+            </select>
+            <span asp-validation-for="CustomerId" class="text-danger"></span>
+        </div>
+        <div class="col-md-6 mb-3">
+            <label asp-for="LeadId" class="form-label"></label>
+            <select asp-for="LeadId" asp-items="ViewBag.Leads" class="form-select">
+                <option value="">-- None --</option>
+            </select>
+            <span asp-validation-for="LeadId" class="text-danger"></span>
+        </div>
+        <partial name="_AssignedToField" model="Model" />
+        <div class="col-md-12 mb-3">
+            <label asp-for="Description" class="form-label"></label>
+            <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+            <span asp-validation-for="Description" class="text-danger"></span>
+        </div>
+    </div>
+    <button type="submit" class="btn btn-primary">Save</button>
+    <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

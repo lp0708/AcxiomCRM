@@ -1,0 +1,57 @@
+@model Lead
+@{
+    ViewData["Title"] = Model.LeadName;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>@Model.LeadName <small class="text-muted">@Model.LeadCode</small> <span class="badge bg-info text-dark">@Model.Status</span></h2>
+    <div>
+        @if (Model.Status == LeadStatus.Qualified)
+        {
+            <form asp-action="Convert" asp-route-id="@Model.Id" method="post" class="d-inline"
+                  onsubmit="return confirm('Convert this lead into a customer and opportunity?');">
+                <button type="submit" class="btn btn-success">Convert to Customer</button>
+            </form>
+        }
+        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary">Edit</a>
+        <a asp-controller="FollowUps" asp-action="Create" asp-route-leadId="@Model.Id" class="btn btn-outline-primary">Schedule Follow-Up</a>
+        <a asp-controller="Activities" asp-action="Create" asp-route-leadId="@Model.Id" class="btn btn-outline-primary">Log Activity</a>
+        <partial name="_DeleteButton" model='("Leads", Model.Id)' />
+    </div>
+</div>
+
+<dl class="row">
+    <dt class="col-sm-2">Email</dt><dd class="col-sm-4">@Model.Email</dd>
+    <dt class="col-sm-2">Phone</dt><dd class="col-sm-4">@Model.Phone</dd>
+    <dt class="col-sm-2">Company</dt><dd class="col-sm-4">@Model.CompanyName</dd>
+    <dt class="col-sm-2">Source</dt><dd class="col-sm-4">@Model.Source</dd>
+    <dt class="col-sm-2">Priority</dt><dd class="col-sm-4">@Model.Priority</dd>
+    <dt class="col-sm-2">Expected Value</dt><dd class="col-sm-4">@Model.ExpectedValue.ToString("N2")</dd>
+    <dt class="col-sm-2">Assigned To</dt><dd class="col-sm-4">@Model.AssignedUser?.UserName</dd>
+    <dt class="col-sm-2">Created</dt><dd class="col-sm-4">@Model.CreatedDate.ToString("dd MMM yyyy HH:mm")</dd>
+    <dt class="col-sm-2">Notes</dt><dd class="col-sm-10">@Model.Notes</dd>
+</dl>
+
+<h4>Follow-Ups</h4>
+<table class="table table-sm">
+    <thead><tr><th>Date</th><th>Type</th><th>Status</th><th>Remarks</th></tr></thead>
+    <tbody>
+        @foreach (var f in Model.FollowUps.OrderBy(f => f.FollowUpDate))
+        {
+            <tr class="@(f.IsOverdue ? "table-danger" : "")">
+                <td>@f.FollowUpDate.ToString("dd MMM yyyy")</td><td>@f.FollowUpType</td><td>@f.Status</td><td>@f.Remarks</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<h4>Activities</h4>
+<table class="table table-sm">
+    <thead><tr><th>Date</th><th>Type</th><th>Subject</th><th>Status</th></tr></thead>
+    <tbody>
+        @foreach (var a in Model.Activities.OrderByDescending(a => a.ActivityDate))
+        {
+            <tr><td>@a.ActivityDate.ToString("dd MMM yyyy")</td><td>@a.ActivityType</td><td>@a.Subject</td><td>@a.Status</td></tr>
+        }
+    </tbody>
+</table>

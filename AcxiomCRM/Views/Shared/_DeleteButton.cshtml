@@ -1,0 +1,9 @@
+@* Delete form with a confirmation dialog, shown only to Admin/Manager. *@
+@model (string Controller, int Id)
+@if (User.IsInRole(Roles.Admin) || User.IsInRole(Roles.Manager))
+{
+    <form asp-controller="@Model.Controller" asp-action="Delete" asp-route-id="@Model.Id" method="post" class="d-inline"
+          onsubmit="return confirm('Delete this record? This cannot be undone.');">
+        <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+    </form>
+}

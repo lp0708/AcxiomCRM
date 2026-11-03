@@ -1,0 +1,81 @@
+﻿@model DashboardViewModel
+@{
+    ViewData["Title"] = "Dashboard";
+    var cards = new (string Label, string Value, string Css)[]
+    {
+        ("Total Customers", Model.TotalCustomers.ToString(), "primary"),
+        ("Total Leads", Model.TotalLeads.ToString(), "info"),
+        ("Open Leads", Model.OpenLeads.ToString(), "info"),
+        ("Total Opportunities", Model.TotalOpportunities.ToString(), "secondary"),
+        ("Open Opportunities", Model.OpenOpportunities.ToString(), "warning"),
+        ("Won Opportunities", Model.WonOpportunities.ToString(), "success"),
+        ("Lost Opportunities", Model.LostOpportunities.ToString(), "danger"),
+        ("Total Pipeline Value", Model.TotalPipelineValue.ToString("N0"), "dark"),
+    };
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Dashboard</h2>
+    <a asp-controller="FollowUps" asp-action="Index" asp-route-view="pending" class="btn btn-outline-primary">
+        Pending follow-ups <span class="badge bg-primary">@Model.PendingFollowUps</span>
+    </a>
+</div>
+
+<div class="row g-3 mb-4">
+    @foreach (var card in cards)
+    {
+        <div class="col-6 col-md-3">
+            <div class="card border-@card.Css h-100">
+                <div class="card-body">
+                    <div class="text-muted small">@card.Label</div>
+                    <div class="fs-3 fw-bold text-@card.Css">@card.Value</div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<div class="row g-3">
+    <div class="col-md-4">
+        <div class="card h-100"><div class="card-body">
+            <h5 class="card-title">Lead Status</h5>
+            <canvas id="leadChart" aria-label="Lead status chart" role="img"></canvas>
+        </div></div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100"><div class="card-body">
+            <h5 class="card-title">Opportunity Pipeline</h5>
+            <canvas id="pipelineChart" aria-label="Opportunity pipeline chart" role="img"></canvas>
+        </div></div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100"><div class="card-body">
+            <h5 class="card-title">Monthly Sales (Won)</h5>
+            <canvas id="salesChart" aria-label="Monthly sales chart" role="img"></canvas>
+        </div></div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script>
+        const leadData = @Json.Serialize(Model.LeadStatusChart);
+        const pipelineData = @Json.Serialize(Model.PipelineChart);
+        const salesData = @Json.Serialize(Model.MonthlySalesChart);
+
+        new Chart(document.getElementById('leadChart'), {
+            type: 'doughnut',
+            data: { labels: Object.keys(leadData), datasets: [{ data: Object.values(leadData) }] }
+        });
+        new Chart(document.getElementById('pipelineChart'), {
+            type: 'bar',
+            data: { labels: Object.keys(pipelineData), datasets: [{ label: 'Opportunities', data: Object.values(pipelineData) }] },
+            options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+        });
+        new Chart(document.getElementById('salesChart'), {
+            type: 'line',
+            data: { labels: Object.keys(salesData), datasets: [{ label: 'Won amount', data: Object.values(salesData), tension: 0.3 }] },
+            options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+        });
+    </script>
+}

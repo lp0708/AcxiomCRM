@@ -1,0 +1,47 @@
+@model List<UserRowViewModel>
+@{
+    ViewData["Title"] = "Users";
+}
+
+<h2>Users</h2>
+<p class="text-muted">New accounts register as SalesExecutive. Change roles and account status here.</p>
+
+<form method="get" class="row g-2 mb-3">
+    <div class="col-md-5"><input name="q" value="@ViewBag.Q" class="form-control" placeholder="Search user" aria-label="Search user" /></div>
+    <div class="col-md-2"><button class="btn btn-outline-secondary w-100">Search</button></div>
+</form>
+
+<table class="table table-striped align-middle">
+    <thead>
+        <tr><th>User</th><th>Role</th><th>Status</th><th>Lockout</th><th>Failed Logins</th><th></th></tr>
+    </thead>
+    <tbody>
+        @foreach (var u in Model)
+        {
+            <tr>
+                <td>@u.UserName</td>
+                <td>
+                    <form asp-action="SetRole" asp-route-id="@u.Id" method="post" class="d-flex gap-1">
+                        <select name="role" class="form-select form-select-sm" asp-items="@(new SelectList(Roles.All, u.Role))" aria-label="Role"></select>
+                        <button class="btn btn-sm btn-outline-primary">Save</button>
+                    </form>
+                </td>
+                <td><span class="badge @(u.IsActive ? "bg-success" : "bg-secondary")">@(u.IsActive ? "Active" : "Inactive")</span></td>
+                <td>@(u.IsLockedOut ? "Locked" : "-")</td>
+                <td>@u.FailedLoginCount</td>
+                <td class="text-nowrap">
+                    <form asp-action="SetActive" asp-route-id="@u.Id" asp-route-active="@(!u.IsActive)" method="post" class="d-inline"
+                          onsubmit="return confirm('@(u.IsActive ? "Deactivate" : "Activate") this user?');">
+                        <button class="btn btn-sm @(u.IsActive ? "btn-outline-danger" : "btn-outline-success")">@(u.IsActive ? "Deactivate" : "Activate")</button>
+                    </form>
+                    @if (u.IsLockedOut)
+                    {
+                        <form asp-action="Unlock" asp-route-id="@u.Id" method="post" class="d-inline">
+                            <button class="btn btn-sm btn-outline-warning">Unlock</button>
+                        </form>
+                    }
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

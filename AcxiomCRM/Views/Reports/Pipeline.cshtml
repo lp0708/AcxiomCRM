@@ -1,0 +1,28 @@
+@model PipelineReportViewModel
+@{
+    ViewData["Title"] = "Pipeline Report";
+}
+
+<h2>Pipeline Report</h2>
+<p class="text-muted">Open opportunities. Weighted = Amount × Probability / 100.</p>
+
+<div class="row">
+    @foreach (var (title, rows) in new[] { ("By Stage", Model.ByStage), ("By Owner", Model.ByOwner) })
+    {
+        <div class="col-md-6">
+            <h4>@title</h4>
+            <table class="table table-striped">
+                <thead><tr><th></th><th class="text-end">Count</th><th class="text-end">Amount</th><th class="text-end">Weighted</th></tr></thead>
+                <tbody>
+                    @foreach (var r in rows)
+                    {
+                        <tr><td>@r.Key</td><td class="text-end">@r.Count</td><td class="text-end">@r.Amount.ToString("N2")</td><td class="text-end">@r.Weighted.ToString("N2")</td></tr>
+                    }
+                </tbody>
+                <tfoot class="fw-bold">
+                    <tr><td>Total</td><td class="text-end">@Model.Total.Count</td><td class="text-end">@Model.Total.Amount.ToString("N2")</td><td class="text-end">@Model.Total.Weighted.ToString("N2")</td></tr>
+                </tfoot>
+            </table>
+        </div>
+    }
+</div>

@@ -1,0 +1,64 @@
+@model Customer
+@{
+    ViewData["Title"] = Model.CustomerName;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>@Model.CustomerName <small class="text-muted">@Model.CustomerCode</small></h2>
+    <div>
+        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary">Edit</a>
+        <a asp-controller="Opportunities" asp-action="Create" asp-route-customerId="@Model.Id" class="btn btn-outline-primary">New Opportunity</a>
+        <a asp-controller="FollowUps" asp-action="Create" asp-route-customerId="@Model.Id" class="btn btn-outline-primary">Schedule Follow-Up</a>
+        <a asp-controller="Activities" asp-action="Create" asp-route-customerId="@Model.Id" class="btn btn-outline-primary">Log Activity</a>
+        <partial name="_DeleteButton" model='("Customers", Model.Id)' />
+    </div>
+</div>
+
+<dl class="row">
+    <dt class="col-sm-2">Email</dt><dd class="col-sm-4">@Model.Email</dd>
+    <dt class="col-sm-2">Phone</dt><dd class="col-sm-4">@Model.Phone</dd>
+    <dt class="col-sm-2">Company</dt><dd class="col-sm-4">@Model.CompanyName</dd>
+    <dt class="col-sm-2">Status</dt><dd class="col-sm-4">@Model.Status</dd>
+    <dt class="col-sm-2">Address</dt><dd class="col-sm-4">@Model.Address @Model.City @Model.State</dd>
+    <dt class="col-sm-2">Assigned To</dt><dd class="col-sm-4">@Model.AssignedUser?.UserName</dd>
+    <dt class="col-sm-2">Created</dt><dd class="col-sm-4">@Model.CreatedDate.ToString("dd MMM yyyy HH:mm") by @Model.CreatedBy</dd>
+    <dt class="col-sm-2">Notes</dt><dd class="col-sm-4">@Model.Notes</dd>
+</dl>
+
+<h4>Opportunities</h4>
+<table class="table table-sm">
+    <thead><tr><th>Name</th><th>Stage</th><th>Amount</th><th>Probability</th><th>Expected Close</th></tr></thead>
+    <tbody>
+        @foreach (var o in Model.Opportunities)
+        {
+            <tr>
+                <td><a asp-controller="Opportunities" asp-action="Details" asp-route-id="@o.Id">@o.OpportunityName</a></td>
+                <td>@o.Stage</td><td>@o.Amount.ToString("N2")</td><td>@o.Probability%</td><td>@o.ExpectedCloseDate.ToString("dd MMM yyyy")</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<h4>Follow-Ups</h4>
+<table class="table table-sm">
+    <thead><tr><th>Date</th><th>Type</th><th>Status</th><th>Remarks</th></tr></thead>
+    <tbody>
+        @foreach (var f in Model.FollowUps.OrderBy(f => f.FollowUpDate))
+        {
+            <tr class="@(f.IsOverdue ? "table-danger" : "")">
+                <td>@f.FollowUpDate.ToString("dd MMM yyyy")</td><td>@f.FollowUpType</td><td>@f.Status</td><td>@f.Remarks</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<h4>Activities</h4>
+<table class="table table-sm">
+    <thead><tr><th>Date</th><th>Type</th><th>Subject</th><th>Status</th></tr></thead>
+    <tbody>
+        @foreach (var a in Model.Activities.OrderByDescending(a => a.ActivityDate))
+        {
+            <tr><td>@a.ActivityDate.ToString("dd MMM yyyy")</td><td>@a.ActivityType</td><td>@a.Subject</td><td>@a.Status</td></tr>
+        }
+    </tbody>
+</table>

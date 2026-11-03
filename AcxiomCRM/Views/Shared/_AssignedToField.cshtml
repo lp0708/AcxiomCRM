@@ -1,0 +1,12 @@
+@* "Assigned To" dropdown, shown only to Admin/Manager. Sales Executives always own their records. *@
+@model IOwned
+@if (!User.IsSalesOnly())
+{
+    <div class="col-md-6 mb-3">
+        <label asp-for="AssignedTo" class="form-label">Assigned To</label>
+        <select asp-for="AssignedTo" asp-items="ViewBag.Assignees" class="form-select">
+            <option value="">-- Select Sales Executive --</option>
+        </select>
+        <span asp-validation-for="AssignedTo" class="text-danger"></span>
+    </div>
+}
